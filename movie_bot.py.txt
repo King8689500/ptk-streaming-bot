@@ -1,12 +1,33 @@
+import os
 import logging
+from flask import Flask
+from threading import Thread
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# Bot Token ထည့်ပါ
-TOKEN = "8719681164:AAGUR3zQTnvtS6wAUaqHV0gkyQ63boGuj4"
+# Bot Token (Environment Variable ကနေ ယူပါ)
+TOKEN = os.environ.get("BOT_TOKEN")
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+# Flask app for health check
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+@app.route('/health')
+def health_check():
+    return "OK", 200
+
+def run_web():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
 
 # /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -73,7 +94,7 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎥 တိုက်ရိုက်ကြည့်ရှုရန် လင့်များ:\n\nhttps://example.com/watch/1\nhttps://example.com/watch/2\n\n(စစ်မှန်သောလင့်များ ထည့်သွင်းပေးပါမည်။)")
 
-# Callback query handler (for buttons)
+# Callback query handler
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -95,23 +116,23 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main function
 def main():
-    app = Application.builder().token(TOKEN).build()
+    keep_alive()  # Start Flask web server
+    app_bot = Application.builder().token(TOKEN).build()
     
-    # Command handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("movies", movies))
-    app.add_handler(CommandHandler("search", search))
-    app.add_handler(CommandHandler("genre", genre))
-    app.add_handler(CommandHandler("request", request_movie))
-    app.add_handler(CommandHandler("latest", latest))
-    app.add_handler(CommandHandler("popular", popular))
-    app.add_handler(CommandHandler("download", download))
-    app.add_handler(CommandHandler("stream", stream))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    app_bot.add_handler(CommandHandler("start", start))
+    app_bot.add_handler(CommandHandler("help", help_command))
+    app_bot.add_handler(CommandHandler("movies", movies))
+    app_bot.add_handler(CommandHandler("search", search))
+    app_bot.add_handler(CommandHandler("genre", genre))
+    app_bot.add_handler(CommandHandler("request", request_movie))
+    app_bot.add_handler(CommandHandler("latest", latest))
+    app_bot.add_handler(CommandHandler("popular", popular))
+    app_bot.add_handler(CommandHandler("download", download))
+    app_bot.add_handler(CommandHandler("stream", stream))
+    app_bot.add_handler(CallbackQueryHandler(button_callback))
     
     print("🤖 Bot is running...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app_bot.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
